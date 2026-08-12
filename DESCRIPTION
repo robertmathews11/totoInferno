@@ -1,0 +1,15 @@
+Package: sexyClustR
+Title: Refine Temporal Gene Expression into Sexy and Sharp Clusters
+Version: 0.0.0.9000
+Authors@R: 
+    person("Robert", "Mathews", , "robertmathews11@outlook.com", role = c("aut", "cre"))
+Description: This package uses multiple methods of hierarchical clustering and filter in order to take circadian gene measurements and output sharp clusters for further analysis.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 8.0.0
+Imports:
+    cluster,
+    dplyr,
+    magrittr,
+    rlang
