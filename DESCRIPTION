@@ -12,7 +12,6 @@ Imports:
     cluster,
     dplyr,
     magrittr,
-    rlang,
-    utils
+    rlang
 URL: https://github.com/robertmathews11/sexyClustR
 BugReports: https://github.com/robertmathews11/sexyClustR/issues

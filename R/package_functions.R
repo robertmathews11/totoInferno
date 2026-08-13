@@ -231,12 +231,15 @@ calculate_cluster_var <- function(input_counts,
   new_counts <- as.data.frame(input_counts)
 
   # For each cluster, isolate and find the values
-  cluster_count <- input_clusters %>% unique(Cluster) %>% length()
+  cluster_count <- input_clusters %>%
+    pull(.data$Cluster) %>%
+    unique() %>%
+    length()
 
   # Run for each cluster
   clusterAppend <- data.frame()
   for(i in 1:cluster_count){
-    pickCluster <- input_clusters %>% filter(Cluster == i) # Isolate Cluster
+    pickCluster <- input_clusters %>% filter(.data$Cluster == i) # Isolate Cluster
     pickGenes <- new_counts %>% filter(row.names(new_counts) %in% pickCluster$Gene) # Pick Genes
 
     clusterVar <- pickGenes %>% var() %>% diag() # Find variance per time point
@@ -268,6 +271,10 @@ calculate_cluster_var <- function(input_counts,
 #' @param final_threshold Which silhouette threshold to end at. The maximum value is 1, so thresholding too close to that will just remove nearly all the genes and usually create errors in doing so. 0.8-0.9 recommended, since clustering a little too far will help visualize the 'drop' in quality gained by removing genes. Lowering the top threshold generally doesn't save too much time, given that the pipeline works faster as the number of genes decreases. This requires input, given that the final threshold should be determined through use of the silhouette_filter_scan function.
 #' @param initial_clusters A data.frame object with two columns: observations (i.e. genes) and clusters. To allow for different naming conventions, the ORDER is important: initial_clusters column 1 == character class (observations), initial_clusters column 2 == numeric class (cluster assignments). If the input data is particularly stubborn to prepare for this pipeline, this is the option to manually set clusters using settings which aren't available or aren't conducive to the silhouette method.
 #' @param stepsize The step size for increasing the silhouette threshold during iterations. Keep in mind our full threshold range is only -1 to 1. 0.01 is recommended for allowing some specificity to small changes while still scanning through all iterations quickly enough. Going smaller generally will not yield more information, but will drastically increase the total computational cost. Small iterations will not remove the inherent behavior of cutting many genes with one step. Going larger may be useful for quickly scanning large data sets or to find a good initial threshold, but may cut too many genes at once for the final test.
+#' @param cor_method Which method to use for correlation. Pearson is strongly recommended, but option for Kendall or Spearman is present.
+#' @param clus_method Which method to use for hierarchical clustering. Complete method allows for non-Euclidian distances, since we are taking pairwise correlations between objects.
+#' @param k_min Minimum number of clusters to test
+#' @param k_max Maximum number of clusters to test
 #' @param verbose Prints the threshold at each step. Useful for monitoring progress.
 #'
 #' @return A list object containing various data metrics, filter metrics, and returned data.
@@ -280,6 +287,10 @@ silhouette_filter_return <- function(expr,
                                      final_threshold   = 0.5,
                                      initial_clusters  = NULL,
                                      stepsize          = 0.01,
+                                     cor_method        = "pearson",
+                                     clus_method       = "complete",
+                                     k_min             = 2L,
+                                     k_max             = 10L,
                                      verbose           = FALSE) {
   thresholds <- seq(initial_threshold, final_threshold, by = stepsize) #create threshold sequence
 
@@ -287,7 +298,7 @@ silhouette_filter_return <- function(expr,
   # This code is the same as used in the silhouette_filter, but makes use of assigned clusters here
   if(length(initial_clusters) > 1){ #if initial_clusters have been inputted, use them
 
-    dmat_initial <- as.dist(1 - cor(t(expr), method = "pearson"))
+    dmat_initial <- as.dist(1 - cor(t(expr), method = cor_method))
     dmat_initial <- as.matrix(dmat_initial) #distance and correlation
 
     sil_tab <- data.frame(
@@ -326,7 +337,9 @@ silhouette_filter_return <- function(expr,
         ## run the full pipeline at this threshold; capture failures as NA rows
         res <- tryCatch(
           silhouette_filter(newexpr, sil_threshold = th,
-                            condition_name = condition_name),
+                            condition_name = condition_name,
+                            clus_method = clus_method, cor_method = cor_method,
+                            k_min = k_min, k_max = k_max),
           error = function(e) NULL
         )
 
@@ -350,6 +363,10 @@ silhouette_filter_return <- function(expr,
 #' @param final_threshold Which silhouette threshold to end at. The maximum value is 1, so thresholding too close to that will just remove nearly all the genes and usually create errors in doing so. 0.8-0.9 recommended, since clustering a little too far will help visualize the 'drop' in quality gained by removing genes. Lowering the top threshold generally doesn't save too much time, given that the pipeline works faster as the number of genes decreases.
 #' @param initial_clusters A data.frame object with two columns: observations (i.e. genes) and clusters. To allow for different naming conventions, the ORDER is important: initial_clusters column 1 == character class (observations), initial_clusters column 2 == numeric class (cluster assignments). If the input data is particularly stubborn to prepare for this pipeline, this is the option to manually set clusters using settings which aren't available or aren't conducive to the silhouette method.
 #' @param stepsize The step size for increasing the silhouette threshold during iterations. Keep in mind our full threshold range is only -1 to 1. 0.01 is recommended for allowing some specificity to small changes while still scanning through all iterations quickly enough. Going smaller generally will not yield more information, but will drastically increase the total computational cost. Small iterations will not remove the inherent behavior of cutting many genes with one step. Going larger may be useful for quickly scanning large data sets or to find a good initial threshold, but may cut too many genes at once for the final test.
+#' @param cor_method Which method to use for correlation. Pearson is strongly recommended, but option for Kendall or Spearman is present.
+#' @param clus_method Which method to use for hierarchical clustering. Complete method allows for non-Euclidian distances, since we are taking pairwise correlations between objects.
+#' @param k_min Minimum number of clusters to test
+#' @param k_max Maximum number of clusters to test
 #' @param verbose Prints the threshold and genes removed at the step. Useful for monitoring progress and speed, or quickly visualizing unexpected results (i.e. too many genes removed early) and halt the function and save time.
 #'
 #' @return A data.frame containing data metrics as the filter threshold increases through iterations.
@@ -362,6 +379,10 @@ silhouette_filter_scan <- function(expr,
                            stepsize          = 0.01,
                            condition_name    = "condition",
                            initial_clusters  = NULL,
+                           cor_method        = "pearson",
+                           clus_method       = "complete",
+                           k_min             = 2L,
+                           k_max             = 10L,
                            verbose           = FALSE) {
 
 
@@ -369,7 +390,7 @@ silhouette_filter_scan <- function(expr,
   # This code is the same as used in the silhouette_filter, but makes use of assigned clusters here
   if(length(initial_clusters) > 1){ #if initial_clusters have been inputted, use them
 
-    dmat_initial <- as.dist(1 - cor(t(expr), method = "pearson"))
+    dmat_initial <- as.dist(1 - cor(t(expr), method = cor_method))
     dmat_initial <- as.matrix(dmat_initial) #distance and correlation
 
     sil_tab <- data.frame(
@@ -419,7 +440,8 @@ silhouette_filter_scan <- function(expr,
       ## run the full pipeline at this threshold; capture failures as NA rows
       res <- tryCatch(
         silhouette_filter(newexpr, sil_threshold = th,
-                          condition_name = condition_name, k_max = 12),
+                          condition_name = condition_name, k_min = k_min, k_max = k_max,
+                          clus_method = clus_method, cor_method = cor_method),
         error = function(e) NULL
       )
       if (is.null(res)) { #return NA during iterations which created an error
@@ -472,6 +494,8 @@ silhouette_filter_scan <- function(expr,
 #' @param cor_method Which method to use for correlation. Pearson is strongly recommended, but option for Kendall or Spearman is present.
 #' @param clus_method Which method to use for hierarchical clustering. Complete method allows for non-Euclidian distances, since we are taking pairwise correlations between objects.
 #' @param cutoff The cutoff to remove genes with the lowest average correlation
+#' @param k_min Minimum number of clusters to test
+#' @param k_max Maximum number of clusters to test
 #' @param verbose Print progress messages
 #'
 #' @return A list object containing two data.frames: The filtered version of the input data.frame, and a data.frame containing the genes (observations) and cluster assignments after filtering.
@@ -479,10 +503,12 @@ silhouette_filter_scan <- function(expr,
 #' @export
 
 cor_filter_return <- function(input_data,
-                                  cor_method  = "pearson",
-                                  clus_method = "complete",
-                                  cutoff      = 0,
-                                  verbose     = FALSE) {
+                              cor_method  = "pearson",
+                              clus_method = "complete",
+                              cutoff      = 0,
+                              k_min       = 2L,
+                              k_max       = 10L,
+                              verbose     = FALSE) {
   ## Initial processing of raw df
   inputCor <- abs(cor(t(input_data), method = cor_method))
   meanCor <- apply(inputCor, 1, mean) #rowwise mean of correlations
@@ -498,7 +524,7 @@ cor_filter_return <- function(input_data,
   filterHclust <- hclust(filterDist, method = clus_method)
 
   # Report silhouette on Curve method, since this is what we plug in to the filter
-  filterCurve <- best_k_labels(filterHclust, filterDist)
+  filterCurve <- best_k_labels(filterHclust, filterDist, k_min = k_min, k_max = k_max)
   filterLabels <- data.frame(Gene = names(filterCurve$labels), Cluster = filterCurve$labels)
 
   return(list(filterData = filterData, filterLabels = filterLabels))
@@ -512,6 +538,8 @@ cor_filter_return <- function(input_data,
 #' @param cor_method Which method to use for correlation. Pearson is strongly recommended, but option for Kendall or Spearman is present.
 #' @param clus_method Which method to use for hierarchical clustering. Complete method allows for non-Euclidian distances, since we are taking pairwise correlations between objects.
 #' @param cutoff The cutoff to remove genes with the lowest average correlation
+#' @param k_min Minimum number of clusters to test
+#' @param k_max Maximum number of clusters to test
 #' @param verbose Print progress messages
 #'
 #' @return A data.frame object containing Standard deviation, Variance, and Silhouette curve.
@@ -522,6 +550,8 @@ cor_filter <- function(input_data,
                        cor_method  = "pearson",
                        clus_method = "complete",
                        cutoff      = 0,
+                       k_min       = 2L,
+                       k_max       = 10L,
                        verbose     = FALSE) {
   # Initial processing of raw df
   inputCor <- abs(cor(t(input_data), method = cor_method))
@@ -537,12 +567,12 @@ cor_filter <- function(input_data,
   filterHclust <- hclust(filterDist, method = clus_method)
 
   # Report silhouette on Curve method, since this is what we plug in to the filter
-  filterCurve <- best_k_labels(filterHclust, filterDist)
+  filterCurve <- best_k_labels(filterHclust, filterDist, k_min = k_min, k_max = k_max)
 
   # Report Var and SD
   clusterCurve <- data.frame(Cluster = filterCurve$labels, Gene = names(filterCurve$labels))
   clusterVar <- calculate_cluster_var(filterData, clusterCurve)
-  clusterVar <- clusterVar %>% filter(Group == "Mean")
+  clusterVar <- clusterVar %>% filter(.data$Group == "Mean")
 
   metric_data <- data.frame(
     Curve = filterCurve$curve[as.numeric(filterCurve$best_k)-1,-3],
@@ -560,6 +590,8 @@ cor_filter <- function(input_data,
 #' @param cutoff_sequence The sequence of cutoffs to iterate through.
 #' @param cor_method Which method to use for correlation. Pearson is strongly recommended, but option for Kendall or Spearman is present.
 #' @param clus_method Which method to use for hierarchical clustering. Complete method allows for non-Euclidian distances, since we are taking pairwise correlations between objects.
+#' @param k_min Minimum number of clusters to test
+#' @param k_max Maximum number of clusters to test
 #' @param verbose Print progress messages
 #'
 #' @export
@@ -568,10 +600,16 @@ cor_filter_scan <- function(input_data,
                             cutoff_sequence,
                             cor_method  = "pearson",
                             clus_method = "complete",
+                            k_min       = 2L,
+                            k_max       = 10L,
                             verbose     = FALSE) {
   scan_append <- data.frame()
   # First run for comparison
-  scan_first <- cor_filter(input_data, cutoff = 0)
+  scan_first <- cor_filter(input_data, cutoff = 0,
+                           cor_method  = cor_method,
+                           clus_method = clus_method,
+                           k_min       = k_min,
+                           k_max       = k_max)
   scan_append <- rbind(scan_append, data.frame(
     Cutoff = 0,
     scan_first
