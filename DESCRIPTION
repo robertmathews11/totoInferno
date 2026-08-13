@@ -13,3 +13,5 @@ Imports:
     dplyr,
     magrittr,
     rlang
+URL: https://github.com/robertmathews11/sexyClustR
+BugReports: https://github.com/robertmathews11/sexyClustR/issues
