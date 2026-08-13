@@ -8,4 +8,7 @@
 #' @importFrom dplyr count filter setdiff
 #' @importFrom cluster silhouette
 #' @importFrom stats cor as.dist hclust cutree var sd
+#' @importFrom utils globalVariables
 NULL
+
+utils::globalVariables(c("Cluster", "Group"))

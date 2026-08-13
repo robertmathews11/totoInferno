@@ -8,6 +8,14 @@
 \description{
 This package uses multiple methods of hierarchical clustering and filter in order to take circadian gene measurements and output sharp clusters for further analysis.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/robertmathews11/sexyClustR}
+  \item Report bugs at \url{https://github.com/robertmathews11/sexyClustR/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Robert Mathews \email{robertmathews11@outlook.com}
 

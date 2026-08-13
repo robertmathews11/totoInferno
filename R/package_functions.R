@@ -231,12 +231,12 @@ calculate_cluster_var <- function(input_counts,
   new_counts <- as.data.frame(input_counts)
 
   # For each cluster, isolate and find the values
-  cluster_count <- input_clusters %>% unique(.data$Cluster) %>% length()
+  cluster_count <- input_clusters %>% unique(Cluster) %>% length()
 
   # Run for each cluster
   clusterAppend <- data.frame()
   for(i in 1:cluster_count){
-    pickCluster <- input_clusters %>% filter(.data$Cluster == i) # Isolate Cluster
+    pickCluster <- input_clusters %>% filter(Cluster == i) # Isolate Cluster
     pickGenes <- new_counts %>% filter(row.names(new_counts) %in% pickCluster$Gene) # Pick Genes
 
     clusterVar <- pickGenes %>% var() %>% diag() # Find variance per time point
@@ -542,7 +542,7 @@ cor_filter <- function(input_data,
   # Report Var and SD
   clusterCurve <- data.frame(Cluster = filterCurve$labels, Gene = names(filterCurve$labels))
   clusterVar <- calculate_cluster_var(filterData, clusterCurve)
-  clusterVar <- clusterVar %>% filter(.data$Group == "Mean")
+  clusterVar <- clusterVar %>% filter(Group == "Mean")
 
   metric_data <- data.frame(
     Curve = filterCurve$curve[as.numeric(filterCurve$best_k)-1,-3],
