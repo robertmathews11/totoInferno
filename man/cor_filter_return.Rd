@@ -9,6 +9,8 @@ cor_filter_return(
   cor_method = "pearson",
   clus_method = "complete",
   cutoff = 0,
+  k_min = 2L,
+  k_max = 10L,
   verbose = FALSE
 )
 }
@@ -20,6 +22,10 @@ cor_filter_return(
 \item{clus_method}{Which method to use for hierarchical clustering. Complete method allows for non-Euclidian distances, since we are taking pairwise correlations between objects.}
 
 \item{cutoff}{The cutoff to remove genes with the lowest average correlation}
+
+\item{k_min}{Minimum number of clusters to test}
+
+\item{k_max}{Maximum number of clusters to test}
 
 \item{verbose}{Print progress messages}
 }

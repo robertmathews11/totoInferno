@@ -11,6 +11,10 @@ silhouette_filter_scan(
   stepsize = 0.01,
   condition_name = "condition",
   initial_clusters = NULL,
+  cor_method = "pearson",
+  clus_method = "complete",
+  k_min = 2L,
+  k_max = 10L,
   verbose = FALSE
 )
 }
@@ -26,6 +30,14 @@ silhouette_filter_scan(
 \item{condition_name}{The name of your condition, which will be paired with the output.}
 
 \item{initial_clusters}{A data.frame object with two columns: observations (i.e. genes) and clusters. To allow for different naming conventions, the ORDER is important: initial_clusters column 1 == character class (observations), initial_clusters column 2 == numeric class (cluster assignments). If the input data is particularly stubborn to prepare for this pipeline, this is the option to manually set clusters using settings which aren't available or aren't conducive to the silhouette method.}
+
+\item{cor_method}{Which method to use for correlation. Pearson is strongly recommended, but option for Kendall or Spearman is present.}
+
+\item{clus_method}{Which method to use for hierarchical clustering. Complete method allows for non-Euclidian distances, since we are taking pairwise correlations between objects.}
+
+\item{k_min}{Minimum number of clusters to test}
+
+\item{k_max}{Maximum number of clusters to test}
 
 \item{verbose}{Prints the threshold and genes removed at the step. Useful for monitoring progress and speed, or quickly visualizing unexpected results (i.e. too many genes removed early) and halt the function and save time.}
 }

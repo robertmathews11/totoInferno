@@ -1,5 +1,5 @@
-Package: sexyClustR
-Title: Refine Temporal Gene Expression into Sexy and Sharp Clusters
+Package: totoInferno
+Title: Refine Temporal Gene Expression into Sharp Clusters
 Version: 0.0.0.9000
 Authors@R: 
     person("Robert", "Mathews", , "robertmathews11@outlook.com", role = c("aut", "cre"))
@@ -13,5 +13,5 @@ Imports:
     dplyr,
     magrittr,
     rlang
-URL: https://github.com/robertmathews11/sexyClustR
-BugReports: https://github.com/robertmathews11/sexyClustR/issues
+URL: https://github.com/robertmathews11/totoInferno
+BugReports: https://github.com/robertmathews11/totoInferno/issues

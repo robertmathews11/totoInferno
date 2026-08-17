@@ -11,6 +11,10 @@ silhouette_filter_return(
   final_threshold = 0.5,
   initial_clusters = NULL,
   stepsize = 0.01,
+  cor_method = "pearson",
+  clus_method = "complete",
+  k_min = 2L,
+  k_max = 10L,
   verbose = FALSE
 )
 }
@@ -26,6 +30,14 @@ silhouette_filter_return(
 \item{initial_clusters}{A data.frame object with two columns: observations (i.e. genes) and clusters. To allow for different naming conventions, the ORDER is important: initial_clusters column 1 == character class (observations), initial_clusters column 2 == numeric class (cluster assignments). If the input data is particularly stubborn to prepare for this pipeline, this is the option to manually set clusters using settings which aren't available or aren't conducive to the silhouette method.}
 
 \item{stepsize}{The step size for increasing the silhouette threshold during iterations. Keep in mind our full threshold range is only -1 to 1. 0.01 is recommended for allowing some specificity to small changes while still scanning through all iterations quickly enough. Going smaller generally will not yield more information, but will drastically increase the total computational cost. Small iterations will not remove the inherent behavior of cutting many genes with one step. Going larger may be useful for quickly scanning large data sets or to find a good initial threshold, but may cut too many genes at once for the final test.}
+
+\item{cor_method}{Which method to use for correlation. Pearson is strongly recommended, but option for Kendall or Spearman is present.}
+
+\item{clus_method}{Which method to use for hierarchical clustering. Complete method allows for non-Euclidian distances, since we are taking pairwise correlations between objects.}
+
+\item{k_min}{Minimum number of clusters to test}
+
+\item{k_max}{Maximum number of clusters to test}
 
 \item{verbose}{Prints the threshold at each step. Useful for monitoring progress.}
 }

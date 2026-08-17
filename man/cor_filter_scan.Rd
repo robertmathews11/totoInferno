@@ -9,6 +9,8 @@ cor_filter_scan(
   cutoff_sequence,
   cor_method = "pearson",
   clus_method = "complete",
+  k_min = 2L,
+  k_max = 10L,
   verbose = FALSE
 )
 }
@@ -20,6 +22,10 @@ cor_filter_scan(
 \item{cor_method}{Which method to use for correlation. Pearson is strongly recommended, but option for Kendall or Spearman is present.}
 
 \item{clus_method}{Which method to use for hierarchical clustering. Complete method allows for non-Euclidian distances, since we are taking pairwise correlations between objects.}
+
+\item{k_min}{Minimum number of clusters to test}
+
+\item{k_max}{Maximum number of clusters to test}
 
 \item{verbose}{Print progress messages}
 }
