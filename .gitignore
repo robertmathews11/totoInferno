@@ -4,3 +4,5 @@
 .httr-oauth
 .DS_Store
 .quarto
+test_script.R
+function_workspace.R

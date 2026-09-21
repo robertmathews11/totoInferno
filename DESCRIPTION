@@ -1,13 +1,12 @@
 Package: totoInferno
 Title: Refine Temporal Gene Expression into Sharp Clusters
-Version: 0.0.0.9000
+Version: 0.0.1.0000
 Authors@R: 
     person("Robert", "Mathews", , "robertmathews11@outlook.com", role = c("aut", "cre"))
 Description: This package uses multiple methods of hierarchical clustering and filter in order to take circadian gene measurements and output sharp clusters for further analysis.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 8.0.0
 Imports:
     cluster,
     dplyr,
@@ -15,3 +14,4 @@ Imports:
     rlang
 URL: https://github.com/robertmathews11/totoInferno
 BugReports: https://github.com/robertmathews11/totoInferno/issues
+Config/roxygen2/version: 8.1.0

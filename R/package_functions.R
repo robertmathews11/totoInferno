@@ -23,79 +23,65 @@ silhouette_filter <- function(expr,
   expr <- as.matrix(expr) #turn into matrix for computational efficiency
   if (is.null(rownames(expr))) stop("Input data must have gene IDs as rownames.")
 
-  ## -- Helper functions ----
-
-    # Pairwise correlation and distance
-    pearson_dist <- function(m) {
-    cc <- cor(t(m), method = cor_method) #take correlation
-    as.dist(1 - cc) #DONT USE DIST(). as.dist does not change our pearson cor dist() will affect the data
-  }
-
   ## -- Step 1: distance and clustering ----
-  d1 <- pearson_dist(expr)
+  d1 <- as.dist(1 - cor(t(expr), method = cor_method))
   hc1 <- hclust(d1, method = clus_method)
 
   ## -- Step 2: First cluster assignment (intended for silhouette curve) ----
 
-    # The initial silhouette grouping genes inappropriately is a major source of error
-    # Too little or (especially) too many groups affects how this pipeline determines "well fit" clusters
+  # The initial silhouette grouping genes inappropriately is a major source of error
+  # Too little or (especially) too many groups affects how this pipeline determines "well fit" clusters
 
-    # If the output is chopping a lot of genes at a low threshold, such as -0.5, the input data is being clustered poorly with the 'complete' method. Use a mean correlation filter to remove some noise and assist the complete clustering. Or (not recommended) use another clustering method.
+  # If the output is chopping a lot of genes at a low threshold, such as -0.5, the input data is being clustered poorly with the 'complete' method. Use a mean correlation filter to remove some noise and assist the complete clustering. Or (not recommended) use another clustering method.
 
-  d1_mat <- as.matrix(d1)
   cut1 <- best_k_labels(hc1, d1, k_min = k_min, k_max = k_max) #take best K
-  labels_p1 <- cut1$labels #assign labels
-  names(labels_p1) <- rownames(expr)
+  labels_p1 <- setNames(cut1[["labels"]], row.names(expr))
+
   n_clusters_p1 <- length(unique(labels_p1))
 
   ## -- Step 3: Trim silhouette assignment ----
 
-  sil_tab <- data.frame(
-    gene       = rownames(expr),
-    cluster_p1 = labels_p1,
-    sil_width  = NA_real_,
-    stringsAsFactors = FALSE
+  sil_tab <- list(
+    gene       = row.names(expr),
+    cluster_p1 = labels_p1
   )
-  if (length(unique(labels_p1)) >= 2) {
-    sil <- silhouette(labels_p1, dmatrix = d1_mat)
-    sil_tab$sil_width <- sil[, "sil_width"]
+
+  if (n_clusters_p1 >= 2) {
+    sil_tab[["sil_width"]] <- silhouette(labels_p1, dist = d1)[, "sil_width"]
   } else {
     warning("[", condition_name, "] Pass ", sil_threshold, " produced < 2 clusters; ",
             "silhouette undefined.")
   }
 
   ## Keep genes with silhouette >= threshold.
-  keep_mask     <- !is.na(sil_tab$sil_width) &
-    (sil_tab$sil_width > sil_threshold) #remove genes which have a silhouette score below the threshold
-  genes_keep    <- rownames(expr)[keep_mask] #apply the filter
-  genes_removed <- setdiff(rownames(expr), genes_keep)
-  n_removed     <- length(genes_removed) #get number of removed genes, for reporting
+  keep_mask     <- !is.na(sil_tab[["sil_width"]]) &
+    (sil_tab[["sil_width"]] > sil_threshold) #remove genes which have a silhouette score below the threshold
 
-  if (length(genes_keep) < 2)
+  expr_keep     <- expr[keep_mask, , drop = FALSE]
+  n_removed     <- abs(nrow(expr) - nrow(expr_keep))
+  rm(d1)
+  rm(hc1)
+  rm(labels_p1)
+  rm(sil_tab)
+
+  if (nrow(expr_keep) < 2)
     stop("[", condition_name, "] Fewer than 2 genes survived the silhouette ",
          "trim (threshold = ", sil_threshold, ")")
 
   ## -- Step 4: Pass-2 re-clustering on remaining genes ----
-  expr_keep <- expr[genes_keep, , drop = FALSE] #same as above
-  d2  <- pearson_dist(expr_keep)
+
+  d2 <- as.dist(1 - cor(t(expr_keep), method = cor_method))
   hc2 <- hclust(d2, method = clus_method)
 
   cut2 <- best_k_labels(hc2, d2, k_min = k_min, k_max = k_max)
-  labels_final <- cut2$labels
-  names(labels_final) <- genes_keep
+  labels_final <- setNames(cut2$labels, row.names(expr_keep))
+
   n_clusters_final <- length(unique(labels_final))
 
-  ## -- Step 5: cluster mean profiles (+ SD) ----
-  cl_ids <- sort(unique(labels_final))
-  mean_profiles <- t(sapply(cl_ids, function(k)
-    colMeans(expr_keep[labels_final == k, , drop = FALSE])))
-
   ## -- Step 6: validation metrics on FINAL clusters ----
-  d2_mat <- as.matrix(d2)
-
   ## mean silhouette of the final clustering
   if (length(unique(labels_final)) >= 2) {
-    sil_final <- silhouette(labels_final, dmatrix = d2_mat)
+    sil_final <- silhouette(labels_final, dist = d2)
     mean_sil_final <- mean(sil_final[, "sil_width"])
     sil_per_cluster <- tapply(sil_final[, "sil_width"], labels_final, mean)
   } else {
@@ -109,38 +95,21 @@ silhouette_filter <- function(expr,
   var_clusters <- data.frame(Cluster = cut2$labels,
                              Gene = names(cut2$labels))
   find_var_sd     <- calculate_cluster_var(expr_keep, var_clusters) #overall score for reporting
-  within_sd_overall <- mean(find_var_sd$SD)
-  within_var_overall <- mean(find_var_sd$Var)
 
-  separate_labels <- as.data.frame(labels_final)
-  separate_labels$labels_final <- as.character(separate_labels$labels_final)
-  cluster_counts <- separate_labels %>% count(labels_final)
-
-  ## Use centroid to calculate cluster separation
-  # Centroids is euclidian, which is less accurate, but separation is insightful regardless
-  if (length(cl_ids) >= 2) {
-    centroid_cc   <- cor(t(mean_profiles), method = cor_method)
-    centroid_dist <- 1 - centroid_cc
-    between_sep   <- mean(centroid_dist[upper.tri(centroid_dist)])
-  } else {
-    between_sep <- NA_real_
-  }
 
   ## -- Step 7: Create list of metrics based on how this pipeline operated ----
   # No one metric is the definitive 'grade'
   # multiple metrics give insight into data refinement and changes over threshold iterations
 
   metrics <- list(
-    mean_silhouette_final = mean_sil_final, # Silhouette calculated from dynamic cutree
+    mean_silhouette_final = mean_sil_final,
     silhouette_per_cluster = sil_per_cluster,
-    within_cluster_sd_overall = within_sd_overall, # Good metric for finding if clusters are more coherent
-    within_cluster_var_overall = within_var_overall,
+    within_cluster_sd_overall = find_var_sd$SD,
+    within_cluster_var_overall = find_var_sd$Var,
     genes_removed = n_removed,
-    between_cluster_separation = between_sep, # This measures similar metric to the silhouette
-    n_clusters_pass1 = n_clusters_p1, # Clusters the silhouette identified and filtered by
-    n_clusters_final = n_clusters_final, # Clusters generated by
+    n_clusters_final = n_clusters_final,
     n_genes_in  = nrow(expr),
-    n_genes_out = length(genes_keep)
+    n_genes_out = nrow(expr_keep)
   )
 
   ## For scan plotting: silhouette, SD, and 'percent genes remaining' scale naturally to 0-1 scale
@@ -149,19 +118,12 @@ silhouette_filter <- function(expr,
 
   list(
     condition      = condition_name,
-    expr           = expr,            # Full input (all genes)
     expr_keep      = expr_keep,       # Genes remaining
-    dist_p1        = d1,
-    hclust_p1      = hc1,
-    labels_p1      = labels_p1,
-    silhouette_tab = sil_tab,         # gene, cluster_p1, sil_width (all genes)
-    genes_keep     = genes_keep,
-    genes_removed  = genes_removed,
+    genes_keep     = row.names(expr_keep),
     dist_final     = d2,
     hclust_final   = hc2,
     labels_final   = labels_final,    # Named survivors
-    mean_profiles  = mean_profiles,   # Cluster x 6 time points
-    sil_curve_p1   = cut1$curve,      # Silhouette curve via silhouette optimized (curve) method
+    sil_curve_p1   = cut1[["curve"]],      # Silhouette curve via silhouette optimized (curve) method
     sil_curve_final= mean_sil_final,  # Silhouette curve via dynamic tree method
     metrics        = metrics,
     params = list(k_min = k_min,
@@ -177,7 +139,7 @@ silhouette_filter <- function(expr,
 #' This helper function assists with finding the optimal number of clusters using the silhouette method.
 #'
 #' @param hc An object produced by the hclust() function. Hierarchical clustered data.
-#' @param dist_mat An object produced by the as.dist() function. A one-dimensional vector of values, calculated as distance between pairwise correlations
+#' @param dist_obj An object produced by the as.dist() function. A one-dimensional vector of values, calculated as distance between pairwise correlations
 #' @param k_min Minimum number of clusters to test
 #' @param k_max Maximum number of clusters to test
 #'
@@ -186,17 +148,17 @@ silhouette_filter <- function(expr,
 #' @export
 
 best_k_labels <- function(hc,
-                          dist_mat,
+                          dist_obj,
                           k_min = 2L,
                           k_max = 10L) {
 
   kk <- k_min:k_max #k values to test
-  dm <- as.matrix(dist_mat) #convert to matrix for use in silhouette
+
 
   curve <- sapply(kk, function(k) { #for each k value...
     lab <- cutree(hc, k = k) #cut the tree there
     if (length(unique(lab)) < 2) return(NA_real_) #NA redundency for 1 cluster
-    mean(silhouette(lab, dmatrix = dm)[, "sil_width"]) #take average silhouette score
+    mean(silhouette(lab, dist = dist_obj)[, "sil_width"]) #take average silhouette score
   })
   if (all(is.na(curve))) #return error if the entire silhouette failed
     stop("No valid k in [", k_min, ",", k_max,
@@ -228,37 +190,27 @@ best_k_labels <- function(hc,
 
 calculate_cluster_var <- function(input_counts,
                                   input_clusters) {
-  new_counts <- as.data.frame(input_counts)
 
   # For each cluster, isolate and find the values
-  cluster_count <- input_clusters %>%
-    pull(.data$Cluster) %>%
-    unique() %>%
-    length()
+  cluster_count <- unique(input_clusters)
 
-  # Run for each cluster
-  clusterAppend <- data.frame()
-  for(i in 1:cluster_count){
-    pickCluster <- input_clusters %>% filter(.data$Cluster == i) # Isolate Cluster
-    pickGenes <- new_counts %>% filter(row.names(new_counts) %in% pickCluster$Gene) # Pick Genes
+  cluster_res <- map_dfr(cluster_count, \(cluster_i) {
+    pickCluster <- input_clusters[input_clusters == cluster_i]
+    pickGenes <- input_counts[names(pickCluster),]
 
-    clusterVar <- pickGenes %>% var() %>% diag() # Find variance per time point
-    clusterVar <- append(clusterVar, mean(clusterVar)) # Append mean
-
-    clusterSD <- pickGenes %>% apply(2,sd) # Find SD per time point
-    clusterSD <- append(clusterSD, mean(clusterSD)) # Append mean
+    clusterVar <- mean(apply(pickGenes, 2, var))
+    clusterSD <- mean(apply(pickGenes, 2, sd))
 
     clusterInfo <- data.frame( # Combine for graphing
       Var  = clusterVar,
-      SD   = clusterSD,
-      Group = c(colnames(pickGenes), "Mean"),
-      Cluster = as.character(i),
+      SD = clusterSD,
+      Cluster = as.character(cluster_i),
       row.names = NULL
     )
-    clusterAppend <- rbind(clusterAppend, clusterInfo)
-  }
+    return(clusterInfo)
+  })
+  return(cluster_res)
 
-  return(clusterAppend)
 }
 
 #' Apply Silhouette Filter Iterations and Return Data.
@@ -605,7 +557,8 @@ cor_filter_scan <- function(input_data,
                             verbose     = FALSE) {
   scan_append <- data.frame()
   # First run for comparison
-  scan_first <- cor_filter(input_data, cutoff = 0,
+  scan_first <- cor_filter(input_data,
+                           cutoff      = 0,
                            cor_method  = cor_method,
                            clus_method = clus_method,
                            k_min       = k_min,
@@ -644,4 +597,26 @@ cor_filter_scan <- function(input_data,
     }
   }
   return(scan_append)
+}
+
+#' Find Metrics on Best Cluster
+#'
+#' @param input_data A data.frame object, row.names as observations, column names as variables
+#' @param cor_method String for which method to pass on to cor(), i.e. "pearson".
+#' @param clus_method String for which method to pass on to hclust(), i.e. "complete".
+#' @param k_min Minimum number of clusters to test
+#' @param k_max Maximum number of clusters to test
+#'
+#' @export
+
+cluster_metric <- function(input_data,
+                           cor_method  = "pearson",
+                           clus_method = "complete",
+                           k_min       = 2L,
+                           k_max       = 10L) {
+  input_mat <- as.matrix(input_data)
+
+  cor_res <- cor(t(input_mat), method = cor_method)
+  cor_hclust <- hclust(as.dist(1 - cor_res), method = clus_method)
+
 }
