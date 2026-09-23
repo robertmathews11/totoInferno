@@ -3,21 +3,24 @@
 export("%>%")
 export(best_k_labels)
 export(calculate_cluster_var)
-export(cluster_metric)
 export(cor_filter)
-export(cor_filter_return)
-export(cor_filter_scan)
+export(cor_filter_iterate)
 export(silhouette_filter)
-export(silhouette_filter_return)
-export(silhouette_filter_scan)
+export(silhouette_filter_iterate)
 importFrom(cluster,silhouette)
 importFrom(dplyr,
   count,
   filter,
+  lead,
   pull,
   setdiff
 )
 importFrom(magrittr,"%>%")
+importFrom(purrr,
+  list_c,
+  map,
+  map_dfr
+)
 importFrom(rlang,.data)
 importFrom(stats,
   as.dist,

@@ -2,24 +2,20 @@
 % Please edit documentation in R/package_functions.R
 \name{silhouette_filter}
 \alias{silhouette_filter}
-\title{Cluster and Filter Data Using Silhouette Scores}
+\title{Cluster and Filter Data Using Silhouette Method}
 \usage{
 silhouette_filter(
   expr,
-  k_min = 2L,
-  k_max = 10L,
   sil_threshold = 0,
   cor_method = "pearson",
   clus_method = "complete",
-  condition_name = "condition"
+  condition_name = "condition",
+  return_output = c("expr", "data", "metric"),
+  ...
 )
 }
 \arguments{
 \item{expr}{A data.frame or matrix object, row names as observations (i.e. genes) and column names as variables (i.e. time points)}
-
-\item{k_min}{Minimum number of clusters to test}
-
-\item{k_max}{Maximum number of clusters to test}
 
 \item{sil_threshold}{Threshold score, removing genes which score below this value}
 
@@ -28,10 +24,19 @@ silhouette_filter(
 \item{clus_method}{Which method to use for hierarchical clustering. Complete method allows for non-Euclidian distances, since we are taking pairwise correlations between objects.}
 
 \item{condition_name}{The name of your condition, which will be paired with the output.}
+
+\item{return_output}{Input one of "expr", "data", or "metric", or both by default. Will return filtered expression, calculated data, and silhouette metrics, respectively.}
+
+\item{...}{
+  Arguments passed on to \code{\link{best_k_labels}}
+  \describe{
+    \item{\code{k_min}}{Minimum number of clusters to test}
+    \item{\code{k_max}}{Maximum number of clusters to test}
+  }}
 }
 \value{
 A list object containing various data metrics, filter metrics, and returned data.
 }
 \description{
-Cluster and Filter Data Using Silhouette Scores
+Cluster and Filter Data Using Silhouette Method
 }

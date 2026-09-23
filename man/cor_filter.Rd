@@ -5,29 +5,37 @@
 \title{Apply High Pass Filter and Return Filter Information}
 \usage{
 cor_filter(
-  input_data,
+  expr,
+  cor_threshold = 0,
   cor_method = "pearson",
   clus_method = "complete",
-  cutoff = 0,
-  k_min = 2L,
-  k_max = 10L,
-  verbose = FALSE
+  return_output = c("expr", "metric"),
+  return_second_cluster = FALSE,
+  verbose = FALSE,
+  ...
 )
 }
 \arguments{
-\item{input_data}{A data.frame object, row names as observations (i.e. genes) and column names as variables (i.e. time points)}
+\item{expr}{A data.frame object, row names as observations (i.e. genes) and column names as variables (i.e. time points)}
+
+\item{cor_threshold}{The cutoff to remove genes with the lowest average correlation}
 
 \item{cor_method}{Which method to use for correlation. Pearson is strongly recommended, but option for Kendall or Spearman is present.}
 
 \item{clus_method}{Which method to use for hierarchical clustering. Complete method allows for non-Euclidian distances, since we are taking pairwise correlations between objects.}
 
-\item{cutoff}{The cutoff to remove genes with the lowest average correlation}
+\item{return_output}{Input one of "expr", "metric", or both by default. Returns the filtered data or the cluster metrics, respectively.}
 
-\item{k_min}{Minimum number of clusters to test}
-
-\item{k_max}{Maximum number of clusters to test}
+\item{return_second_cluster}{TRUE/FALSE. Determines to pass on a second silhouette-based cluster amount, determined by the largest gain in silhouette width as cluster amount decreases. Useful for separating similar, but distinct groups.}
 
 \item{verbose}{Print progress messages}
+
+\item{...}{
+  Arguments passed on to \code{\link{best_k_labels}}
+  \describe{
+    \item{\code{k_min}}{Minimum number of clusters to test}
+    \item{\code{k_max}}{Maximum number of clusters to test}
+  }}
 }
 \value{
 A data.frame object containing Standard deviation, Variance, and Silhouette curve.
