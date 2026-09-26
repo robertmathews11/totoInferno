@@ -135,7 +135,7 @@ silhouette_filter <- function(
     ...
 
     ) {
-  if(!"data" %in% return_output & !"metric" %in% return_output){
+  if(!"data" %in% return_output & !"metric" %in% return_output & !"expr" %in% return_output){
     stop("Unrecognized return value, please see documentation for options")
   }
 
