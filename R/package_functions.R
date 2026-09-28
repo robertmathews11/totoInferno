@@ -4,6 +4,7 @@
 #'
 #' @param hc An object produced by the hclust() function. Hierarchical clustered data.
 #' @param dist_obj An object produced by the as.dist() function. A one-dimensional vector of values, calculated as distance between pairwise correlations
+#' @param input_counts Counts to determine if silhouette k+1 results in the freeing of a subcluster
 #' @param k_min Minimum number of clusters to test
 #' @param k_max Maximum number of clusters to test
 #'
@@ -15,13 +16,13 @@ best_k_labels <- function(
 
     hc,
     dist_obj,
+    input_counts = NULL,
     k_min = 2L,
     k_max = 10L
 
     ) {
 
   kk <- k_min:k_max #k values to test
-
 
   curve <- sapply(kk, function(k) { #for each k value...
     lab <- cutree(hc, k = k) #cut the tree there
@@ -38,6 +39,49 @@ best_k_labels <- function(
   curve_d <- curve[1:length(curve)-1] - lead(curve)[1:length(curve)-1]
   best_gain <- kk[which.max(curve_d)]
 
+  split_res <- FALSE
+  if(!is.null(input_counts)){
+    alt_labels <- cutree(hc, k = (best_k + 1))
+
+    count_labels <- tabulate(assign_labels) %>% setNames(nm = unique(assign_labels))
+    count_alt <- tabulate(alt_labels) %>% setNames(nm = unique(alt_labels))
+
+    filter_cluster <- count_alt[!count_alt %in% count_labels]
+
+    # Filter top and find eigenvector
+    initial_top <- assign_labels[assign_labels == names(count_labels[which.max(count_labels)])]
+    ev_initial <- input_counts[row.names(input_counts) %in% names(initial_top),] %>%
+      t() %>% cor(method = "pearson") %>%
+      eigs_sym(k = 10, which = "LA")
+    ev_initial <- ev_initial[["values"]]
+    ev_initial <- ev_initial / sum(ev_initial)
+
+    # Filter the larger split and find eigenvector
+    split_top <- assign_labels[alt_labels == names(filter_cluster[which.max(filter_cluster)])]
+    ev_split_top <- input_counts[row.names(input_counts) %in% names(split_top),] %>%
+      t() %>% cor(method = "pearson") %>%
+      eigs_sym(k = 10, which = "LA")
+    ev_split_top <- ev_split_top[["values"]]
+    ev_split_top <- ev_split_top / sum(ev_split_top)
+
+    # Filter the smaller split and find eigenvector
+    split_bot <- assign_labels[alt_labels == names(filter_cluster[which.min(filter_cluster)])]
+    ev_split_bot <- input_counts[row.names(input_counts) %in% names(split_bot),] %>%
+      t() %>% cor(method = "pearson") %>%
+      eigs_sym(k = 10, which = "LA")
+    ev_split_bot <- ev_split_bot[["values"]]
+    ev_split_bot <- ev_split_bot / sum(ev_split_bot)
+
+    # Calculate if the split increases or decreases A2/A1
+    if(
+      (ev_initial[2]/ev_initial[1]) > ((ev_split_top[2]/ev_split_top[1]) + (ev_split_bot[2]/ev_split_bot[1]))
+      ){
+      assign_labels <- alt_labels
+      best_k <- (best_k + 1)
+      split_res <- TRUE
+    }
+  }
+
   if(1 %in% tabulate(assign_labels)){3
     best_k <- kk[which.max(curve)+1]
     assign_labels <- cutree(hc, k = best_k)
@@ -52,7 +96,8 @@ best_k_labels <- function(
       k       = kk,
       mean_sil = curve
     ),
-    singlet = bump_k
+    singlet = bump_k,
+    split_k = split_res
   ))
 }
 
@@ -83,13 +128,19 @@ calculate_cluster_var <- function(
 
     if(length(pickCluster) > 1){
     pickGenes <- input_counts[names(pickCluster),]
-    clusterVar <- mean(apply(pickGenes, 2, var))
-    clusterSD <- mean(apply(pickGenes, 2, sd))
+    clusterVar <- apply(pickGenes, 2, var)
+    clusterSD <- apply(pickGenes, 2, sd)
 
-    clusterInfo <- data.frame( # Combine for graphing
-      Var  = clusterVar,
-      SD = clusterSD,
+    ev_res <- eigen(cor(t(pickGenes),method = "pearson"), symmetric = TRUE, only.values = TRUE)$values
+    prop <- ev_res / sum(ev_res)
+
+    clusterInfo <- list( # Combine for graphing
+      Var  = mean(clusterVar),
+      sum_var = sum(clusterVar),
+      SD = mean(clusterSD),
       Cluster = as.character(cluster_i),
+      n = length(pickCluster),
+      eigen = prop[1:5],
       row.names = NULL
     )
     return(clusterInfo)
@@ -97,8 +148,10 @@ calculate_cluster_var <- function(
 
     clusterInfo <- data.frame( # Combine for graphing
       Var  = 0,
+      mean_var = mean(clusterVar),
       SD = 0,
       Cluster = as.character(cluster_i),
+      n = length(pickCluster),
       row.names = NULL
     )
     return(clusterInfo)
@@ -153,7 +206,7 @@ silhouette_filter <- function(
 
   # If the output is chopping a lot of genes at a low threshold, such as -0.5, the input data is being clustered poorly with the 'complete' method. Use a mean correlation filter to remove some noise and assist the complete clustering. Or (not recommended) use another clustering method.
 
-  cut1 <- best_k_labels(hc1, d1, ...) #take best K
+  cut1 <- best_k_labels(hc1, d1, expr, ...) #take best K
   labels_p1 <- setNames(cut1[["labels"]], row.names(expr))
 
   n_clusters_p1 <- length(unique(labels_p1))
@@ -192,7 +245,7 @@ silhouette_filter <- function(
   d2 <- as.dist(1 - cor(t(expr_keep), method = cor_method))
   hc2 <- hclust(d2, method = clus_method)
 
-  cut2 <- best_k_labels(hc2, d2, ...)
+  cut2 <- best_k_labels(hc2, d2, expr_keep, ...)
   labels_final <- setNames(cut2$labels, row.names(expr_keep))
 
   ## -- Step 6: validation metrics on FINAL clusters ----
@@ -227,7 +280,8 @@ silhouette_filter <- function(
       n_clusters_second = cut2$gain_k,
       singlet = cut2$singlet,
       n_genes_in  = nrow(expr),
-      n_genes_out = nrow(expr_keep)
+      n_genes_out = nrow(expr_keep),
+      split_k = cut2[["split_k"]]
     )
   }
 
@@ -403,7 +457,7 @@ cor_filter <- function(
     dist_res <- as.dist(1 - cor(t(expr_filter), method = cor_method))
     hclust_res <- hclust(dist_res, method = clus_method)
 
-    sil_res <- best_k_labels(hclust_res, dist_res, ...)
+    sil_res <- best_k_labels(hclust_res, dist_res, expr_filter, ...)
     best_k <- sil_res[["best_k"]]
 
     var_res <- calculate_cluster_var(expr_filter, sil_res$labels)
@@ -416,7 +470,8 @@ cor_filter <- function(
       var = mean(var_res[["Var"]][var_res[["Var"]] > 0]),
       remaining = length(filter_mask),
       n_cluster = best_k,
-      singlet = sil_res$singlet
+      singlet = sil_res$singlet,
+      split_k = sil_res[["split_k"]]
     )
     if(return_second_cluster == TRUE){
       res[["metric"]][["n_cluster_second"]] <- sil_res$gain_k
