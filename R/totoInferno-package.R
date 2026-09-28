@@ -9,4 +9,5 @@
 #' @importFrom cluster silhouette
 #' @importFrom stats cor as.dist hclust cutree var sd setNames
 #' @importFrom purrr map map_dfr list_c
+#' @importFrom RSpectra eigs_sym
 NULL

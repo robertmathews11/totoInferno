@@ -4,12 +4,14 @@
 \alias{best_k_labels}
 \title{Find Silhouette-Optimized Clusters}
 \usage{
-best_k_labels(hc, dist_obj, k_min = 2L, k_max = 10L)
+best_k_labels(hc, dist_obj, input_counts = NULL, k_min = 2L, k_max = 10L)
 }
 \arguments{
 \item{hc}{An object produced by the hclust() function. Hierarchical clustered data.}
 
 \item{dist_obj}{An object produced by the as.dist() function. A one-dimensional vector of values, calculated as distance between pairwise correlations}
+
+\item{input_counts}{Counts to determine if silhouette k+1 results in the freeing of a subcluster}
 
 \item{k_min}{Minimum number of clusters to test}
 

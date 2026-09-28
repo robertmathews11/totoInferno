@@ -13,7 +13,8 @@ Imports:
     magrittr,
     rlang,
     stats,
-    purrr
+    purrr,
+    RSpectra
 URL: https://github.com/robertmathews11/totoInferno
 BugReports: https://github.com/robertmathews11/totoInferno/issues
 Config/roxygen2/version: 8.1.0
