@@ -348,7 +348,7 @@ silhouette_filter_iterate <- function(
 
     ) {
 
-  if(class(expr) != "matrix"){stop("Expression input must be a matrix class object")}
+  if(!"matrix" %in% class(expr)){stop("Expression input must be a matrix class object")}
 
   ## Run the iterative scan
   metric_res <- data.frame()
@@ -520,7 +520,7 @@ cor_filter_iterate <- function(
 
 ) {
 
-  if(class(expr) != "matrix"){stop("Expression input must be a matrix class object")}
+  if(!"matrix" %in% class(expr)){stop("Expression input must be a matrix class object")}
 
   # Run iterations of scanned parameters
 
