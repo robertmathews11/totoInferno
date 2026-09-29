@@ -46,39 +46,43 @@ best_k_labels <- function(
     count_labels <- tabulate(assign_labels) %>% setNames(nm = unique(assign_labels))
     count_alt <- tabulate(alt_labels) %>% setNames(nm = unique(alt_labels))
 
-    filter_cluster <- count_alt[!count_alt %in% count_labels]
+    if(max(count_labels) != max(count_alt)){
 
-    # Filter top and find eigenvector
-    initial_top <- assign_labels[assign_labels == names(count_labels[which.max(count_labels)])]
-    ev_initial <- input_counts[row.names(input_counts) %in% names(initial_top),] %>%
-      t() %>% cor(method = "pearson") %>%
-      eigs_sym(k = 10, which = "LA")
-    ev_initial <- ev_initial[["values"]]
-    ev_initial <- ev_initial / sum(ev_initial)
 
-    # Filter the larger split and find eigenvector
-    split_top <- assign_labels[alt_labels == names(filter_cluster[which.max(filter_cluster)])]
-    ev_split_top <- input_counts[row.names(input_counts) %in% names(split_top),] %>%
-      t() %>% cor(method = "pearson") %>%
-      eigs_sym(k = 10, which = "LA")
-    ev_split_top <- ev_split_top[["values"]]
-    ev_split_top <- ev_split_top / sum(ev_split_top)
+      filter_cluster <- count_alt[!count_alt %in% count_labels]
 
-    # Filter the smaller split and find eigenvector
-    split_bot <- assign_labels[alt_labels == names(filter_cluster[which.min(filter_cluster)])]
-    ev_split_bot <- input_counts[row.names(input_counts) %in% names(split_bot),] %>%
-      t() %>% cor(method = "pearson") %>%
-      eigs_sym(k = 10, which = "LA")
-    ev_split_bot <- ev_split_bot[["values"]]
-    ev_split_bot <- ev_split_bot / sum(ev_split_bot)
+      # Filter top and find eigenvector
+      initial_top <- assign_labels[assign_labels == names(count_labels[which.max(count_labels)])]
+      ev_initial <- input_counts[row.names(input_counts) %in% names(initial_top),] %>%
+        t() %>% cor(method = "pearson") %>%
+        eigs_sym(k = min(c(10, length(initial_top)-1)), which = "LA")
+      ev_initial <- ev_initial[["values"]]
+      ev_initial <- ev_initial / sum(ev_initial)
 
-    # Calculate if the split increases or decreases A2/A1
-    if(
-      (ev_initial[2]/ev_initial[1]) > ((ev_split_top[2]/ev_split_top[1]) + (ev_split_bot[2]/ev_split_bot[1]))
-      ){
-      assign_labels <- alt_labels
-      best_k <- (best_k + 1)
-      split_res <- TRUE
+      # Filter the larger split and find eigenvector
+      split_top <- assign_labels[alt_labels == names(filter_cluster[which.max(filter_cluster)])]
+      ev_split_top <- input_counts[row.names(input_counts) %in% names(split_top),] %>%
+        t() %>% cor(method = "pearson") %>%
+        eigs_sym(k = min(c(10, length(split_top)-1)), which = "LA")
+      ev_split_top <- ev_split_top[["values"]]
+      ev_split_top <- ev_split_top / sum(ev_split_top)
+
+      # Filter the smaller split and find eigenvector
+      split_bot <- assign_labels[alt_labels == names(filter_cluster[which.min(filter_cluster)])]
+      ev_split_bot <- input_counts[row.names(input_counts) %in% names(split_bot),] %>%
+        t() %>% cor(method = "pearson") %>%
+        eigs_sym(k = min(c(10, length(split_bot)-1)), which = "LA")
+      ev_split_bot <- ev_split_bot[["values"]]
+      ev_split_bot <- ev_split_bot / sum(ev_split_bot)
+
+      # Calculate if the split increases or decreases A2/A1
+      if(
+        (ev_initial[2]/ev_initial[1]) > ((ev_split_top[2]/ev_split_top[1]) + (ev_split_bot[2]/ev_split_bot[1]))
+        ){
+        assign_labels <- alt_labels
+        best_k <- (best_k + 1)
+        split_res <- TRUE
+      }
     }
   }
 
