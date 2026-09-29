@@ -27,6 +27,7 @@ silhouette_filter_iterate(
     \item{\code{cor_method}}{Which method to use for correlation. Pearson is strongly recommended, but option for Kendall or Spearman is present.}
     \item{\code{clus_method}}{Which method to use for hierarchical clustering. Complete method allows for non-Euclidian distances, since we are taking pairwise correlations between objects.}
     \item{\code{condition_name}}{The name of your condition, which will be paired with the output.}
+    \item{\code{cor_expr}}{An optional input of a pre-computed correlation, meant to save time on iterations.}
     \item{\code{k_min}}{Minimum number of clusters to test}
     \item{\code{k_max}}{Maximum number of clusters to test}
   }}

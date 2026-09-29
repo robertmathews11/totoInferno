@@ -10,6 +10,7 @@ silhouette_filter(
   cor_method = "pearson",
   clus_method = "complete",
   condition_name = "condition",
+  cor_expr = NULL,
   return_output = c("expr", "data", "metric"),
   ...
 )
@@ -24,6 +25,8 @@ silhouette_filter(
 \item{clus_method}{Which method to use for hierarchical clustering. Complete method allows for non-Euclidian distances, since we are taking pairwise correlations between objects.}
 
 \item{condition_name}{The name of your condition, which will be paired with the output.}
+
+\item{cor_expr}{An optional input of a pre-computed correlation, meant to save time on iterations.}
 
 \item{return_output}{Input one of "expr", "data", or "metric", or both by default. Will return filtered expression, calculated data, and silhouette metrics, respectively.}
 

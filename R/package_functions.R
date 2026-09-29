@@ -172,6 +172,7 @@ calculate_cluster_var <- function(
 #' @param cor_method Which method to use for correlation. Pearson is strongly recommended, but option for Kendall or Spearman is present.
 #' @param clus_method Which method to use for hierarchical clustering. Complete method allows for non-Euclidian distances, since we are taking pairwise correlations between objects.
 #' @param condition_name The name of your condition, which will be paired with the output.
+#' @param cor_expr An optional input of a pre-computed correlation, meant to save time on iterations.
 #' @param return_output Input one of "expr", "data", or "metric", or both by default. Will return filtered expression, calculated data, and silhouette metrics, respectively.
 #' @param ... Additional parameters to be passed on to [totoInferno::best_k_labels]
 #' @inheritDotParams best_k_labels k_min k_max
@@ -187,11 +188,12 @@ silhouette_filter <- function(
     cor_method     = "pearson",
     clus_method    = "complete",
     condition_name = "condition",
+    cor_expr        = NULL,
     return_output  = c("expr", "data", "metric"),
 
     ...
 
-    ) {
+) {
   if(!"data" %in% return_output & !"metric" %in% return_output & !"expr" %in% return_output){
     stop("Unrecognized return value, please see documentation for options")
   }
@@ -200,7 +202,11 @@ silhouette_filter <- function(
   if (is.null(rownames(expr))) stop("Input data must have gene IDs as rownames.")
 
   ## -- Step 1: distance and clustering ----
-  d1 <- as.dist(1 - cor(t(expr), method = cor_method))
+  if(is.null(cor_expr)){
+    cor_expr <- cor(t(expr), method = cor_method)
+  }
+
+  d1 <- as.dist(1 - cor_expr)
   hc1 <- hclust(d1, method = clus_method)
 
   ## -- Step 2: First cluster assignment (intended for silhouette curve) ----
@@ -246,7 +252,7 @@ silhouette_filter <- function(
 
   ## -- Step 4: Pass-2 re-clustering on remaining genes ----
 
-  d2 <- as.dist(1 - cor(t(expr_keep), method = cor_method))
+  d2 <- as.dist(1 - cor_expr[row.names(expr_keep),row.names(expr_keep)])
   hc2 <- hclust(d2, method = clus_method)
 
   cut2 <- best_k_labels(hc2, d2, expr_keep, ...)
