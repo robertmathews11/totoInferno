@@ -198,9 +198,6 @@ silhouette_filter <- function(
     stop("Unrecognized return value, please see documentation for options")
   }
 
-  expr <- as.matrix(expr) #turn into matrix for computational efficiency
-  if (is.null(rownames(expr))) stop("Input data must have gene IDs as rownames.")
-
   ## -- Step 1: distance and clustering ----
   if(is.null(cor_expr)){
     cor_expr <- cor(t(expr), method = cor_method)
@@ -351,7 +348,7 @@ silhouette_filter_iterate <- function(
 
     ) {
 
-  expr <- as.matrix(expr)
+  if(class(expr) != "matrix"){stop("Expression input must be a matrix class object")}
 
   ## Run the iterative scan
   metric_res <- data.frame()
@@ -523,7 +520,7 @@ cor_filter_iterate <- function(
 
 ) {
 
-  expr <- as.matrix(input_data)
+  if(class(expr) != "matrix"){stop("Expression input must be a matrix class object")}
 
   # Run iterations of scanned parameters
 
