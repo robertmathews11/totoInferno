@@ -204,6 +204,8 @@ silhouette_filter <- function(
   ## -- Step 1: distance and clustering ----
   if(is.null(cor_expr)){
     cor_expr <- cor(t(expr), method = cor_method)
+  }else{
+    cor_expr <- cor_expr[row.names(expr),row.names(expr)]
   }
 
   d1 <- as.dist(1 - cor_expr)
