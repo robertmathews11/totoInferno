@@ -46,8 +46,8 @@ best_k_labels <- function(
     count_labels <- tabulate(assign_labels) %>% setNames(nm = unique(assign_labels))
     count_alt <- tabulate(alt_labels) %>% setNames(nm = unique(alt_labels))
 
-    if(max(count_labels) != max(count_alt)){
 
+    if(max(count_labels) != max(count_alt)){
 
       filter_cluster <- count_alt[!count_alt %in% count_labels]
 
