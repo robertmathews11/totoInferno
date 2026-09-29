@@ -16,7 +16,7 @@ silhouette_filter(
 )
 }
 \arguments{
-\item{expr}{A data.frame or matrix object, row names as observations (i.e. genes) and column names as variables (i.e. time points)}
+\item{expr}{A matrix object, row names as observations (i.e. genes) and column names as variables (i.e. time points)}
 
 \item{sil_threshold}{Threshold score, removing genes which score below this value}
 

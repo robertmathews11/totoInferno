@@ -16,7 +16,7 @@ cor_filter(
 )
 }
 \arguments{
-\item{expr}{A data.frame object, row names as observations (i.e. genes) and column names as variables (i.e. time points)}
+\item{expr}{A matrix object, row names as observations (i.e. genes) and column names as variables (i.e. time points)}
 
 \item{cor_threshold}{The cutoff to remove genes with the lowest average correlation}
 

@@ -7,7 +7,7 @@
 calculate_cluster_var(input_counts, input_clusters)
 }
 \arguments{
-\item{input_counts}{A data.frame or matrix object, row names as observations (i.e. genes) and column names as variables (i.e. time points)}
+\item{input_counts}{A matrix object, row names as observations (i.e. genes) and column names as variables (i.e. time points)}
 
 \item{input_clusters}{A data.frame object with two columns: observations (i.e. genes) and clusters. To allow for different naming conventions, the ORDER is important: initial_clusters column 1 == character class (observations), initial_clusters column 2 == numeric class (cluster assignments).}
 }

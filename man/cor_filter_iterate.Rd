@@ -5,7 +5,7 @@
 \title{Apply High Pass Filter Iterations and Return Metrics}
 \usage{
 cor_filter_iterate(
-  input_data,
+  expr,
   threshold_sequence,
   return_output = c("expr", "metric"),
   iterate_data = FALSE,
@@ -14,7 +14,7 @@ cor_filter_iterate(
 )
 }
 \arguments{
-\item{input_data}{A data.frame object, row names as observations (i.e. genes) and column names as variables (i.e. time points)}
+\item{expr}{A matrix object, row names as observations (i.e. genes) and column names as variables (i.e. time points)}
 
 \item{threshold_sequence}{The sequence of cutoffs to iterate through.}
 

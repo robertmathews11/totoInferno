@@ -13,7 +13,7 @@ silhouette_filter_iterate(
 )
 }
 \arguments{
-\item{expr}{A data.frame or matrix object, row names as observations (i.e. genes) and column names as variables (i.e. time points)}
+\item{expr}{A matrix object, row names as observations (i.e. genes) and column names as variables (i.e. time points)}
 
 \item{threshold_sequence}{A vector or list, preferably made by seq(), which contains the thresholds to iterate through}
 

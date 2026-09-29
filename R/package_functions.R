@@ -110,7 +110,7 @@ best_k_labels <- function(
 #'
 #' This helper function takes input data and clusters to calculate each cluster's standard deviation and variance per variable (i.e. time point)
 #'
-#' @param input_counts A data.frame or matrix object, row names as observations (i.e. genes) and column names as variables (i.e. time points)
+#' @param input_counts A matrix object, row names as observations (i.e. genes) and column names as variables (i.e. time points)
 #' @param input_clusters A data.frame object with two columns: observations (i.e. genes) and clusters. To allow for different naming conventions, the ORDER is important: initial_clusters column 1 == character class (observations), initial_clusters column 2 == numeric class (cluster assignments).
 #'
 #' @return A data.frame object containing metrics for the input clusters.
@@ -167,7 +167,7 @@ calculate_cluster_var <- function(
 
 #' Cluster and Filter Data Using Silhouette Method
 #'
-#' @param expr A data.frame or matrix object, row names as observations (i.e. genes) and column names as variables (i.e. time points)
+#' @param expr A matrix object, row names as observations (i.e. genes) and column names as variables (i.e. time points)
 #' @param sil_threshold Threshold score, removing genes which score below this value
 #' @param cor_method Which method to use for correlation. Pearson is strongly recommended, but option for Kendall or Spearman is present.
 #' @param clus_method Which method to use for hierarchical clustering. Complete method allows for non-Euclidian distances, since we are taking pairwise correlations between objects.
@@ -325,7 +325,7 @@ silhouette_filter <- function(
 #'
 #' This function is similar to silhouette_filter_scan but removes many redundancies for reporting how the pipeline works through the data. This increases speed and reduces memory burden. The intended use is with parameters determined through silhouette_filter_scan, then using this function to more efficiently apply the filter and return the data.
 #'
-#' @param expr A data.frame or matrix object, row names as observations (i.e. genes) and column names as variables (i.e. time points)
+#' @param expr A matrix object, row names as observations (i.e. genes) and column names as variables (i.e. time points)
 #' @param threshold_sequence A vector or list, preferably made by seq(), which contains the thresholds to iterate through
 #' @param return_output Input one of "expr", "metric", or both by default. Returns the filtered data or the cluster metrics, respectively.
 #' @param verbose Prints the threshold at each step. Useful for monitoring progress.
@@ -413,7 +413,7 @@ silhouette_filter_iterate <- function(
 #'
 #' This function uses the average correlation of observations (i.e. genes) to remove those which have the smallest correlations to the system. This increases the cluster separation when using the 'complete' hierarchical clustering method. Increased cluster separation allows for the silhouette_filter function to handle input data more predictably. This function specifically returns various metrics for use in the cor_filter_scan function to determine the optimal initial high pass filter.
 #'
-#' @param expr A data.frame object, row names as observations (i.e. genes) and column names as variables (i.e. time points)
+#' @param expr A matrix object, row names as observations (i.e. genes) and column names as variables (i.e. time points)
 #' @param cor_threshold The cutoff to remove genes with the lowest average correlation
 #' @param cor_method Which method to use for correlation. Pearson is strongly recommended, but option for Kendall or Spearman is present.
 #' @param clus_method Which method to use for hierarchical clustering. Complete method allows for non-Euclidian distances, since we are taking pairwise correlations between objects.
@@ -497,7 +497,7 @@ cor_filter <- function(
 
 #' Apply High Pass Filter Iterations and Return Metrics
 #'
-#' @param input_data A data.frame object, row names as observations (i.e. genes) and column names as variables (i.e. time points)
+#' @param expr A matrix object, row names as observations (i.e. genes) and column names as variables (i.e. time points)
 #' @param threshold_sequence The sequence of cutoffs to iterate through.
 #' @param return_output Input one of "expr", "metric", or both by default. Returns the filtered data or the cluster metrics, respectively.
 #' @param iterate_data TRUE/FALSE. Determines whether to overwrite the expression data at each iterated threshold.
@@ -510,7 +510,7 @@ cor_filter <- function(
 
 cor_filter_iterate <- function(
 
-  input_data,
+  expr,
   threshold_sequence,
   return_output = c("expr", "metric"),
   iterate_data = FALSE,
