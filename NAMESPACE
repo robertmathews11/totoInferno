@@ -7,7 +7,6 @@ export(cor_filter)
 export(cor_filter_iterate)
 export(silhouette_filter)
 export(silhouette_filter_iterate)
-importFrom(RSpectra,eigs_sym)
 importFrom(cluster,silhouette)
 importFrom(dplyr,
   count,
@@ -16,6 +15,7 @@ importFrom(dplyr,
   pull,
   setdiff
 )
+importFrom(fastcluster,hclust)
 importFrom(magrittr,"%>%")
 importFrom(purrr,
   list_c,
@@ -27,7 +27,6 @@ importFrom(stats,
   as.dist,
   cor,
   cutree,
-  hclust,
   sd,
   setNames,
   var

@@ -53,27 +53,27 @@ best_k_labels <- function(
 
       # Filter top and find eigenvector
       initial_top <- assign_labels[assign_labels == names(count_labels[which.max(count_labels)])]
-      ev_initial <- input_counts[row.names(input_counts) %in% names(initial_top),] %>%
-        t() %>% cor(method = "pearson") %>%
-        eigs_sym(k = min(c(10, length(initial_top)-1)), which = "LA")
-      ev_initial <- ev_initial[["values"]]
-      ev_initial <- ev_initial / sum(ev_initial)
+      sub_top <- input_counts[row.names(input_counts) %in% names(initial_top),]
+
+      ev_initial <- eigen(crossprod(t(scale(t(sub_top)))) / (ncol(sub_top) - 1),
+            symmetric = TRUE, only.values = TRUE)$values
+      ev_initial <- (ev_initial / sum(ev_initial))[1:5]
 
       # Filter the larger split and find eigenvector
       split_top <- assign_labels[alt_labels == names(filter_cluster[which.max(filter_cluster)])]
-      ev_split_top <- input_counts[row.names(input_counts) %in% names(split_top),] %>%
-        t() %>% cor(method = "pearson") %>%
-        eigs_sym(k = min(c(10, length(split_top)-1)), which = "LA")
-      ev_split_top <- ev_split_top[["values"]]
-      ev_split_top <- ev_split_top / sum(ev_split_top)
+      sub_split_top <- input_counts[row.names(input_counts) %in% names(split_top),]
+
+      ev_split_top <- eigen(crossprod(t(scale(t(sub_split_top)))) / (ncol(sub_split_top) - 1),
+                          symmetric = TRUE, only.values = TRUE)$values
+      ev_split_top <- (ev_split_top / sum(ev_split_top))[1:5]
 
       # Filter the smaller split and find eigenvector
       split_bot <- assign_labels[alt_labels == names(filter_cluster[which.min(filter_cluster)])]
-      ev_split_bot <- input_counts[row.names(input_counts) %in% names(split_bot),] %>%
-        t() %>% cor(method = "pearson") %>%
-        eigs_sym(k = min(c(10, length(split_bot)-1)), which = "LA")
-      ev_split_bot <- ev_split_bot[["values"]]
-      ev_split_bot <- ev_split_bot / sum(ev_split_bot)
+      sub_split_bot <- input_counts[row.names(input_counts) %in% names(split_bot),]
+
+      ev_split_bot <- eigen(crossprod(t(scale(t(sub_split_bot)))) / (ncol(sub_split_bot) - 1),
+                            symmetric = TRUE, only.values = TRUE)$values
+      ev_split_bot <- (ev_split_bot / sum(ev_split_bot))[1:5]
 
       # Calculate if the split increases or decreases A2/A1
       if(
@@ -111,7 +111,7 @@ best_k_labels <- function(
 #' This helper function takes input data and clusters to calculate each cluster's standard deviation and variance per variable (i.e. time point)
 #'
 #' @param input_counts A matrix object, row names as observations (i.e. genes) and column names as variables (i.e. time points)
-#' @param input_clusters A data.frame object with two columns: observations (i.e. genes) and clusters. To allow for different naming conventions, the ORDER is important: initial_clusters column 1 == character class (observations), initial_clusters column 2 == numeric class (cluster assignments).
+#' @param input_clusters A named int object, with names as genes and values as cluster assignment. Preferably, one produced by cutree$labels.
 #'
 #' @return A data.frame object containing metrics for the input clusters.
 #'
@@ -135,16 +135,17 @@ calculate_cluster_var <- function(
     clusterVar <- apply(pickGenes, 2, var)
     clusterSD <- apply(pickGenes, 2, sd)
 
-    ev_res <- eigen(cor(t(pickGenes),method = "pearson"), symmetric = TRUE, only.values = TRUE)$values
-    prop <- ev_res / sum(ev_res)
+    ev_res <- eigen(crossprod(t(scale(t(pickGenes)))) / (ncol(pickGenes) - 1),
+                        symmetric = TRUE, only.values = TRUE)$values
+    ev_res <- (ev_res / sum(ev_res))[1:5]
 
     clusterInfo <- list( # Combine for graphing
       Var  = mean(clusterVar),
       sum_var = sum(clusterVar),
       SD = mean(clusterSD),
-      Cluster = as.character(cluster_i),
+      cluster = as.character(cluster_i),
       n = length(pickCluster),
-      eigen = prop[1:5],
+      eigen = ev_res,
       row.names = NULL
     )
     return(clusterInfo)
@@ -271,7 +272,7 @@ silhouette_filter <- function(
   ## within-cluster SD/SE of the expression profile (per cluster + overall)
   # mean over the 6 time points of each cluster's per-time-point SD.
 
-  find_var_sd     <- calculate_cluster_var(expr_keep, cut2$labels) #overall score for reporting
+  var_res     <- calculate_cluster_var(expr_keep, cut2$labels) #overall score for reporting
 
 
   ## -- Step 7: Create list of metrics based on how this pipeline operated ----
@@ -282,8 +283,9 @@ silhouette_filter <- function(
     res[["metric"]] <- list(
       mean_silhouette_final = cut2$curve[cut2$curve$k == cut2$best_k,]$mean_sil,
       mean_silhouette_second = cut2$curve[cut2$curve$k == cut2$gain_k,]$mean_sil,
-      within_cluster_sd_overall = find_var_sd$SD,
-      within_cluster_var_overall = find_var_sd$Var,
+      within_cluster_sd_overall = mean(var_res$SD),
+      within_cluster_var_overall = mean(var_res$Var),
+      eigen = var_res[c("cluster", "eigen")],
       genes_removed = n_removed,
       n_clusters_final = cut2$best_k,
       n_clusters_second = cut2$gain_k,
@@ -304,7 +306,6 @@ silhouette_filter <- function(
   if("data" %in% return_output){
     res[["data"]] <- list(
       genes_keep     = row.names(expr_keep),
-      dist_final     = d2,
       hclust_final   = hc2,
       labels_final   = labels_final,    # Named survivors
       sil_curve_p1   = cut1[["curve"]],      # Silhouette curve via silhouette optimized (curve) method
@@ -477,6 +478,7 @@ cor_filter <- function(
       silhouette = sil_res$curve[sil_res$curve$k == sil_res$best_k,]$mean_sil,
       sd = mean(var_res[["SD"]][var_res[["SD"]] > 0]),
       var = mean(var_res[["Var"]][var_res[["Var"]] > 0]),
+      eigen = var_res[c("cluster", "eigen")],
       remaining = length(filter_mask),
       n_cluster = best_k,
       singlet = sil_res$singlet,
@@ -548,7 +550,7 @@ cor_filter_iterate <- function(
   if("metric" %in% return_output){
     res[["metric"]] <- list_c(res_list)
     scan_first <- cor_filter(
-      input_data,
+      expr,
       cor_threshold      = 0,
       return_output = "metric",
       ...
