@@ -306,6 +306,7 @@ silhouette_filter <- function(
   if("data" %in% return_output){
     res[["data"]] <- list(
       genes_keep     = row.names(expr_keep),
+      dist_final     = d2,
       hclust_final   = hc2,
       labels_final   = labels_final,    # Named survivors
       sil_curve_p1   = cut1[["curve"]],      # Silhouette curve via silhouette optimized (curve) method
